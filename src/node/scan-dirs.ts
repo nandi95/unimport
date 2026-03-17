@@ -83,8 +83,13 @@ const FileExtensionLookup = [
 
 const FileLookupPatterns = `*.{${FileExtensionLookup.join(',')}}`
 
+const RE_EXCLAMATION_PREFIX = /^!/
+const RE_FILE_EXT = /\.\w+$/
+const RE_NAME_SEPARATOR = /[-_.]/
+const RE_DTS_EXT = /\.d\.[mc]?ts$/
+
 function resolveGlobsExclude(glob: string, cwd: string) {
-  return `${glob.startsWith('!') ? '!' : ''}${resolve(cwd, glob.replace(/^!/, ''))}`
+  return `${glob.startsWith('!') ? '!' : ''}${resolve(cwd, glob.replace(RE_EXCLAMATION_PREFIX, ''))}`
 }
 
 function joinGlobFilePattern(glob: string, filePattern: string) {
@@ -102,7 +107,7 @@ export function normalizeScanDirs(dirs: (string | ScanDir)[], options?: ScanDirE
     const types = isString ? topLevelTypes : (dir.types ?? topLevelTypes)
 
     // Ends with a extension, consider as a file
-    if (/\.\w+$/.test(glob))
+    if (RE_FILE_EXT.test(glob))
       return { glob, types }
 
     // Otherwise, append the default file patterns `*.{mts,cts,ts,tsx,mjs,cjs,js,jsx}`
@@ -186,7 +191,7 @@ export async function scanExports(filepath: string, includeTypes: boolean, seen 
 
     // Only camel-case name if it contains separators by which scule would split,
     // see STR_SPLITTERS: https://github.com/unjs/scule/blob/main/src/index.ts
-    const as = /[-_.]/.test(name) ? camelCase(name) : name
+    const as = RE_NAME_SEPARATOR.test(name) ? camelCase(name) : name
     imports.push({ name: 'default', as, from: filepath })
   }
 
@@ -258,7 +263,7 @@ export async function scanExports(filepath: string, includeTypes: boolean, seen 
     }
   }
 
-  const isDts = filepath.match(/\.d\.[mc]?ts$/)
+  const isDts = filepath.match(RE_DTS_EXT)
 
   if (isDts) {
     if (includeTypes) {

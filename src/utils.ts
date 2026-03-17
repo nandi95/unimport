@@ -9,14 +9,19 @@ export function defineUnimportPreset(preset: InlinePreset): InlinePreset {
   return preset
 }
 
-const identifierRE = /^[A-Z_$][\w$]*$/i
-const safePropertyName = /^[a-z$_][\w$]*$/i
+const RE_IDENTIFIER = /^[A-Z_$][\w$]*$/i
+const RE_SAFE_PROPERTY_NAME = /^[a-z$_][\w$]*$/i
+const RE_FILE_EXT = /\.[a-z]+$/i
+const RE_RELATIVE_PATH = /^[./]/
+const RE_DTS_EXT = /\.d\.([cm]?)ts$/i
+const RE_SHEBANG = /^#!.+/
+const RE_IMPORT_BRACE = /^\s*import\s*\{/
 
 function stringifyWith(withValues: Record<string, string>) {
   let withDefs = ''
   for (let entries = Object.entries(withValues), l = entries.length, i = 0; i < l; i++) {
     const [prop, value] = entries[i]
-    withDefs += safePropertyName.test(prop) ? prop : JSON.stringify(prop)
+    withDefs += RE_SAFE_PROPERTY_NAME.test(prop) ? prop : JSON.stringify(prop)
     withDefs += `: ${JSON.stringify(String(value))}`
     if ((i + 1) !== l)
       withDefs += ', '
@@ -153,11 +158,11 @@ export function toExports(imports: Import[], fileDir?: string, includeType = fal
   return Object.entries(map)
     .flatMap(([name, imports]) => {
       if (isFilePath(name))
-        name = name.replace(/\.[a-z]+$/i, '')
+        name = name.replace(RE_FILE_EXT, '')
 
       if (fileDir && isAbsolute(name)) {
         name = relative(fileDir, name)
-        if (!/^[./]/.test(name))
+        if (!RE_RELATIVE_PATH.test(name))
           name = `./${name}`
       }
       const entries: string[] = []
@@ -177,7 +182,7 @@ export function toExports(imports: Import[], fileDir?: string, includeType = fal
 }
 
 export function stripFileExtension(path: string) {
-  return path.replace(/\.[a-z]+$/i, '')
+  return path.replace(RE_FILE_EXT, '')
 }
 
 export function toTypeDeclarationItems(imports: Import[], options?: TypeDeclarationOptions) {
@@ -191,7 +196,7 @@ export function toTypeDeclarationItems(imports: Import[], options?: TypeDeclarat
         typeDef += `import('${from}')`
 
       if (i.name !== '*' && i.name !== '=')
-        typeDef += identifierRE.test(i.name) ? `.${i.name}` : `['${i.name}']`
+        typeDef += RE_IDENTIFIER.test(i.name) ? `.${i.name}` : `['${i.name}']`
 
       return `const ${i.as}: typeof ${typeDef}`
     })
@@ -241,7 +246,7 @@ export function toTypeReExports(imports: Import[], options?: TypeDeclarationOpti
   const importsMap = makeTypeModulesMap(imports, options?.resolvePath)
   const code = Array.from(importsMap).flatMap(([from, module]) => {
     // ensure we have the correct file extension if we are handling raw declarations
-    from = from.replace(/\.d\.([cm]?)ts$/i, '.$1js')
+    from = from.replace(RE_DTS_EXT, '.$1js')
 
     const { starTypeImport, typeImports } = module
     // TypeScript incorrectly reports an error when re-exporting types in a d.ts file.
@@ -337,8 +342,7 @@ export function addImportToCode(
   }
 
   function hasShebang() {
-    const shebangRegex = /^#!.+/
-    return shebangRegex.test(s.original)
+    return RE_SHEBANG.test(s.original)
   }
 
   if (mergeExisting && !isCJS) {
@@ -358,7 +362,7 @@ export function addImportToCode(
 
     for (const [target, items] of map.entries()) {
       const strings = items.map(i => `${stringifyImportAlias(i)}, `)
-      const importLength = target.code.match(/^\s*import\s*\{/)?.[0]?.length
+      const importLength = target.code.match(RE_IMPORT_BRACE)?.[0]?.length
       if (importLength)
         s.appendLeft(target.start + importLength, ` ${strings.join('').trim()}`)
     }

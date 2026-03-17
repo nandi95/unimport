@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { excludeRE, importAsRE, separatorRE, stripCommentsAndStrings } from '../src/regexp'
+import { RE_EXCLUDE, RE_IMPORT_AS, RE_SEPARATOR, stripCommentsAndStrings } from '../src/regexp'
 
 describe('regex for extract local variable', () => {
   const cases: { input: string, output: string[] }[] = [
@@ -34,10 +34,10 @@ describe('regex for extract local variable', () => {
       const strippedCode = stripCommentsAndStrings(item.input)
       const identifiers: string[] = []
 
-      for (const match of strippedCode.matchAll(excludeRE[3])) {
-        const segments = [...match[1]?.split(separatorRE) || [], ...match[2]?.split(separatorRE) || []]
+      for (const match of strippedCode.matchAll(RE_EXCLUDE[3])) {
+        const segments = [...match[1]?.split(RE_SEPARATOR) || [], ...match[2]?.split(RE_SEPARATOR) || []]
         for (const segment of segments) {
-          const identifier = segment.replace(importAsRE, '').trim()
+          const identifier = segment.replace(RE_IMPORT_AS, '').trim()
           identifiers.push(identifier)
         }
       }
@@ -63,10 +63,10 @@ describe('regex for extract imported/exported variables', () => {
       const strippedCode = stripCommentsAndStrings(item.input)
       const identifiers: string[] = []
 
-      for (const match of strippedCode.matchAll(excludeRE[0])) {
-        const segments = [...match[1]?.split(separatorRE) || [], ...match[2]?.split(separatorRE) || []]
+      for (const match of strippedCode.matchAll(RE_EXCLUDE[0])) {
+        const segments = [...match[1]?.split(RE_SEPARATOR) || [], ...match[2]?.split(RE_SEPARATOR) || []]
         for (const segment of segments) {
-          const identifier = segment.replace(importAsRE, '').trim()
+          const identifier = segment.replace(RE_IMPORT_AS, '').trim()
           identifiers.push(identifier)
         }
       }

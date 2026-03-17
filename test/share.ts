@@ -38,7 +38,7 @@ export function resolverAddon(): Addon {
     async matchImports(names, matched) {
       const dynamic: Import[] = []
       for (const name of names) {
-        if (!name.match(/^El[A-Z]/))
+        if (!/^El[A-Z]/.test(name))
           continue
         dynamic.push({
           name,

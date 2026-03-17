@@ -32,7 +32,7 @@ export function vueDirectivesAddon(
   const self = {
     name: VUE_DIRECTIVES_NAME,
     async transform(s, id) {
-      if (!s.original.match(contextRE))
+      if (!contextRE.test(s.original))
         return s
 
       const matches = Array
@@ -64,7 +64,7 @@ export function vueDirectivesAddon(
 
       // Remove resolveDirective import only if there are no more directives.
       // User may be using missing directives or globally registered directives.
-      if (!s.toString().match(directiveRE))
+      if (!directiveRE.test(s.toString()))
         s.replace(contextText, '')
 
       for (const addon of this.addons) {

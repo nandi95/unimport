@@ -28,7 +28,7 @@ export function vueTemplateAddon(): Addon {
 
         const tempName = `__unimport_${name}`
         s.overwrite(start, end, `(${JSON.stringify(name)} in _ctx ? _ctx.${name} : ${UNREF_KEY}(${tempName}))`)
-        if (!targets.find(i => i.as === tempName)) {
+        if (!targets.some(i => i.as === tempName)) {
           targets.push({
             ...item,
             as: tempName,

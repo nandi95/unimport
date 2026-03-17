@@ -157,7 +157,7 @@ export function toExports(imports: Import[], fileDir?: string, includeType = fal
 
       if (fileDir && isAbsolute(name)) {
         name = relative(fileDir, name)
-        if (!name.match(/^[./]/))
+        if (!/^[./]/.test(name))
           name = `./${name}`
       }
       const entries: string[] = []

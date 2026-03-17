@@ -102,7 +102,7 @@ export function normalizeScanDirs(dirs: (string | ScanDir)[], options?: ScanDirE
     const types = isString ? topLevelTypes : (dir.types ?? topLevelTypes)
 
     // Ends with a extension, consider as a file
-    if (glob.match(/\.\w+$/))
+    if (/\.\w+$/.test(glob))
       return { glob, types }
 
     // Otherwise, append the default file patterns `*.{mts,cts,ts,tsx,mjs,cjs,js,jsx}`
@@ -163,7 +163,7 @@ export function dedupeDtsExports(exports: Import[]) {
     if (i.declarationType === 'enum' || i.declarationType === 'const enum' || i.declarationType === 'class')
       return true
 
-    return !exports.find(e => e.as === i.as && e.name === i.name && !e.type)
+    return !exports.some(e => e.as === i.as && e.name === i.name && !e.type)
   })
 }
 

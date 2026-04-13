@@ -117,40 +117,74 @@ export function stringifyImports(imports: Import[], isCJS = false) {
     .join('\n')
 }
 
+function encodeImportName(name: string) {
+  return `\uFFFF${name}\uFFFE`
+}
+
 export function dedupeImports(imports: Import[], warn: (msg: string) => void) {
-  const map = new Map<string, number>()
-  const indexToRemove = new Set<number>()
+  const deduped = new Map<string | number, Import>()
 
-  imports.filter(i => !i.disabled).forEach((i, idx) => {
-    if (i.declarationType === 'enum' || i.declarationType === 'const enum' || i.declarationType === 'class')
-      return
-
-    const name = i.as ?? i.name
-    if (!map.has(name)) {
-      map.set(name, idx)
-      return
+  for (let idx = imports.length - 1; idx >= 0; idx--) {
+    const currImp = imports[idx]
+    if (currImp.disabled || currImp.declarationType === 'enum' || currImp.declarationType === 'const enum' || currImp.declarationType === 'class') {
+      deduped.set(idx, currImp)
+      continue
     }
 
-    const other = imports[map.get(name)!]
-
-    if (other.from === i.from) {
-      indexToRemove.add(idx)
-      return
+    const name = String(currImp.as ?? currImp.name)
+    const prevImp = deduped.get(name)
+    if (!prevImp) {
+      deduped.set(name, currImp)
+      continue
     }
-    const diff = (other.priority || 1) - (i.priority || 1)
-    if (diff === 0)
-      warn(`Duplicated imports "${name}", the one from "${other.from}" has been ignored and "${i.from}" is used`)
 
-    if (diff <= 0) {
-      indexToRemove.add(map.get(name)!)
-      map.set(name, idx)
-    }
-    else {
-      indexToRemove.add(idx)
-    }
-  })
+    const isSameSpecifier = (currImp.type || prevImp.type)
+      ? (currImp.typeFrom || currImp.from) === (prevImp.typeFrom || prevImp.from)
+      : currImp.from === prevImp.from
 
-  return imports.filter((_, idx) => !indexToRemove.has(idx))
+    if (isSameSpecifier) {
+      if (Boolean(currImp.type) === Boolean(prevImp.type)) {
+        // currImp and prevImp are the same import
+        if ((currImp.priority || 1) > (prevImp.priority || 1)) {
+          deduped.delete(name)
+          deduped.set(name, currImp)
+        }
+      }
+      else {
+        // currImp and prevImp are complementary imports; one for the value and one for the type
+        const altName = encodeImportName(name)
+        const prevImpComplement = deduped.get(altName)
+        if (!prevImpComplement) {
+          deduped.set(altName, currImp)
+        }
+        else if ((currImp.priority || 1) > (prevImpComplement.priority || 1)) {
+          deduped.delete(altName)
+          deduped.set(altName, currImp)
+        }
+      }
+      continue
+    }
+
+    // currImp and prevImp are duplicate imports
+    const altName = encodeImportName(name)
+    const prevImpComplement = deduped.get(altName)
+    const priorityDiff = (currImp.priority || 1) - Math.max(prevImp.priority || 1, prevImpComplement?.priority || 1)
+    if (priorityDiff > 0) {
+      deduped.delete(name)
+      deduped.delete(altName)
+      deduped.set(name, currImp)
+    }
+    else if (priorityDiff === 0) {
+      warn(`Duplicated imports "${name}", the one from "${currImp.from}" has been ignored and "${prevImp.from}" is used`)
+    }
+  }
+
+  let i = deduped.size
+  const dedupedImports = new Array(i) // eslint-disable-line unicorn/no-new-array
+  for (const imp of deduped.values()) {
+    dedupedImports[--i] = imp
+  }
+  return dedupedImports
 }
 
 export function toExports(imports: Import[], fileDir?: string, includeType = false, options: ToExportsOptions = {}) {

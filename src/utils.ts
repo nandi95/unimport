@@ -145,7 +145,7 @@ export function dedupeImports(imports: Import[], warn: (msg: string) => void) {
     if (isSameSpecifier) {
       if (Boolean(currImp.type) === Boolean(prevImp.type)) {
         // currImp and prevImp are the same import
-        if ((currImp.priority || 1) > (prevImp.priority || 1)) {
+        if ((currImp.priority ?? 1) > (prevImp.priority ?? 1)) {
           deduped.delete(name)
           deduped.set(name, currImp)
         }
@@ -157,7 +157,7 @@ export function dedupeImports(imports: Import[], warn: (msg: string) => void) {
         if (!prevImpComplement) {
           deduped.set(altName, currImp)
         }
-        else if ((currImp.priority || 1) > (prevImpComplement.priority || 1)) {
+        else if ((currImp.priority ?? 1) > (prevImpComplement.priority ?? 1)) {
           deduped.delete(altName)
           deduped.set(altName, currImp)
         }
@@ -168,7 +168,10 @@ export function dedupeImports(imports: Import[], warn: (msg: string) => void) {
     // currImp and prevImp are duplicate imports
     const altName = encodeImportName(name)
     const prevImpComplement = deduped.get(altName)
-    const priorityDiff = (currImp.priority || 1) - Math.max(prevImp.priority || 1, prevImpComplement?.priority || 1)
+    const prevPriority = prevImpComplement
+      ? Math.max(prevImp.priority ?? 1, prevImpComplement.priority ?? 1)
+      : prevImp.priority ?? 1
+    const priorityDiff = (currImp.priority ?? 1) - prevPriority
     if (priorityDiff > 0) {
       deduped.delete(name)
       deduped.delete(altName)
